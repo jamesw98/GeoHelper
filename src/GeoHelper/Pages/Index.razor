@@ -1,0 +1,166 @@
+﻿@page "/"
+
+@using NetTopologySuite.IO
+@using GeoHelper.Models
+@inject HttpClient Http
+@implements IAsyncDisposable
+
+@inject IJSRuntime JsRuntime
+@inject ISnackbar Snackbar
+
+<div id="map" style="width:90%; height:700px;"></div>
+
+<br/>
+
+<MudContainer MaxWidth="MaxWidth.Small" class="align-content-center">
+    <MudItem xs="12" sm="4">
+        <div class="d-flex">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="@(() => { _polygons.Add(new Polygon()); })">
+                Add Polygon
+            </MudButton>
+        </div>
+    </MudItem>
+</MudContainer>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    @foreach (var polygon in _polygons)
+    {
+        <MudItem xs="12" sm="10">
+            <MudPaper Class="pa-4">
+                <div class="d-flex">
+                    <MudTextField Label="Name" Class="mt-3" Variant="Variant.Outlined"
+                                  @bind-Value="polygon.Name" For="@(() => polygon.Name)"/>
+                    <div style="flex-grow: 0.05"/>
+                    <MudSelect Label="Type" class="mt-3" Variant="Variant.Outlined"
+                               T="PolygonTypes" @bind-Value="@polygon.Type" For="@(() => polygon.Type)">
+                        <MudSelectItem T="PolygonTypes" Value="PolygonTypes.Wkt"></MudSelectItem>
+                        <MudSelectItem T="PolygonTypes" Value="PolygonTypes.GeoJson"></MudSelectItem>
+                    </MudSelect>
+                    <div style="flex-grow: 0.05"/>
+                    <MudTextField Label="Polygon" Class="mt-3" Variant="Variant.Outlined"
+                                  @bind-Value="polygon.RawInput" For="@(() => polygon.RawInput)"/>
+                    <div style="flex-grow: 0.05"/>
+                    <MudColorPicker @bind-Text="@polygon.HexColor" Label="Spectrum" 
+                                    ColorPickerView="ColorPickerView.Spectrum" />
+                    @* <MudTextField Label="Color" Class="mt-3" Variant="Variant.Outlined" *@
+                    @*               @bind-Value="polygon.HexColor" For="@(() => polygon.HexColor)"/> *@
+                    <div style="flex-grow: 0.05"/>
+                    <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" VerticalAlign="true" OverrideStyles="false">
+                        <MudButton Variant="Variant.Outlined"
+                                   OnClick="@(async () => { await AddPolygon(polygon); })"
+                                   Color="Color.Success">
+                            Add
+                        </MudButton>
+                        <br style="margin-top: 5px"/>
+                        <MudButton Variant="Variant.Outlined"
+                                   OnClick="@(async () => { await RemovePolygon(polygon.Name); })"
+                                   Color="Color.Error">
+                            Remove
+                        </MudButton>
+                    </MudButtonGroup>
+                </div>
+            </MudPaper>
+        </MudItem>
+        <br/>
+    }
+
+</MudContainer>
+
+@code {
+    private IJSObjectReference? _module;
+    private List<Polygon> _polygons = new();
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var client = new HttpClient();
+            
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./leaflet.js");
+            if (_module != null)
+            {
+                await _module.InvokeAsync<string>("load_map");
+        
+                var defaultPolygon = new Polygon
+                {
+                    Name = "Default WKT",
+                    HexColor = "#0000ff",
+                    RawInput = await Http.GetStringAsync("sample-data/defaultWkt.txt"),
+                    Type = PolygonTypes.Wkt
+                };
+                
+                _polygons.Add(defaultPolygon);
+                await AddPolygon(defaultPolygon);
+                StateHasChanged();
+            }
+        }
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
+    }
+
+    private async Task AddPolygon(Polygon poly)
+    {
+        if (_module != null)
+        {
+            if (poly.RawInput == null)
+            {
+                Snackbar.Add("Please input a polygon", Severity.Warning);
+                return;
+            }
+            
+            poly.RawGeoJson = poly.Type == PolygonTypes.GeoJson
+                ? poly.RawInput
+                : WktToGeoJsonString(poly.RawInput);
+
+            if (_polygons.All(x => x.Name != poly.Name))
+            {
+                Snackbar.Add("Cannot add duplicate names", Severity.Error);
+                return;
+            }
+
+            await _module.InvokeVoidAsync("add_geojson", poly.RawGeoJson, poly.Name, poly.HexColor);
+        }
+    }
+
+    private async Task RemovePolygon(string? name)
+    {
+        if (_module != null && name != null)
+        {
+            await _module.InvokeVoidAsync("remove_geo", name);
+            var toRemove = _polygons.First(x => x.Name == name);
+
+            // if we have more than one polygon, just remove it from the list
+            if (_polygons.Count > 1)
+            {
+                _polygons.Remove(toRemove);
+            }
+            // if we only have one, just null out the values
+            else
+            {
+                toRemove.Name = null;
+                toRemove.RawGeoJson = null;
+                toRemove.RawInput = null;
+                toRemove.HexColor = null;
+            }
+        }
+    }
+
+    private string WktToGeoJsonString(string? wkt)
+    {
+        var wktReader = new WKTReader();
+        var geo = wktReader.Read(wkt) ?? throw new ArgumentException();
+
+        var geoJsonWriter = new GeoJsonWriter();
+        var geoJsonString = geoJsonWriter.Write(geo);
+        return geoJsonString;
+    }
+
+}
