@@ -7,10 +7,10 @@
   "linkerEnabled": true,
   "resources": {
     "assembly": {
-      "GeoHelper.dll": "sha256-9oEhB309WtwgvOD7Du8KVlVepaZx7JecOZiSk8RDRiw=",
-      "Microsoft.AspNetCore.Components.dll": "sha256-4qj5jI6S\/tfkYyW8G7zFNMNuV7cQFZhrxlEeiFSBGjk=",
+      "GeoHelper.dll": "sha256-6hebcEJXfrH+iritVBS4w9iKZ0oMIG\/1NHqApS\/FBbs=",
+      "Microsoft.AspNetCore.Components.dll": "sha256-TMI7OQ73cJnhY4l+Gjv9x6mTWEOE0xvY02KWCCOP\/1Q=",
       "Microsoft.AspNetCore.Components.Forms.dll": "sha256-wcPyGU\/T7lzlTPNy+M4AeOL1yYc7qTSAkQwoYJPJdO0=",
-      "Microsoft.AspNetCore.Components.Web.dll": "sha256-gPGXcbHTycnW\/FDJypDsT3WOmn3oXFi7Mf55zZBK2CE=",
+      "Microsoft.AspNetCore.Components.Web.dll": "sha256-4A8TfFsUXNvWfh5sQDlxMqPfHLUKMRq9Vfdez8Bc3bM=",
       "Microsoft.AspNetCore.Components.WebAssembly.dll": "sha256-tpvXX7M\/LEGTEvYWgu8LEXMhjtjwoFAKuxUiqdpIH2E=",
       "Microsoft.CSharp.dll": "sha256-PmNnXcT2e4IKiAyJD4Fo99xGta\/kv6ilVkGToMgMzhw=",
       "Microsoft.Extensions.Configuration.Abstractions.dll": "sha256-X\/f4fDl2cuIRXeWHhK\/f2UqQbFioD+RU4a4CEh0zrrQ=",
