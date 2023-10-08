@@ -18,7 +18,7 @@
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        OnClick="@(() => { _polygons.Add(new Polygon()); })">
-                Add Polygon
+                Add Additional Polygon
             </MudButton>
         </div>
     </MudItem>
@@ -44,14 +44,12 @@
                     <div style="flex-grow: 0.05"/>
                     <MudColorPicker @bind-Text="@polygon.HexColor" Label="Spectrum" 
                                     ColorPickerView="ColorPickerView.Spectrum" />
-                    @* <MudTextField Label="Color" Class="mt-3" Variant="Variant.Outlined" *@
-                    @*               @bind-Value="polygon.HexColor" For="@(() => polygon.HexColor)"/> *@
                     <div style="flex-grow: 0.05"/>
                     <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" VerticalAlign="true" OverrideStyles="false">
                         <MudButton Variant="Variant.Outlined"
                                    OnClick="@(async () => { await AddPolygon(polygon); })"
                                    Color="Color.Success">
-                            Add
+                            Create
                         </MudButton>
                         <br style="margin-top: 5px"/>
                         <MudButton Variant="Variant.Outlined"
@@ -76,8 +74,6 @@
     {
         if (firstRender)
         {
-            var client = new HttpClient();
-            
             _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./leaflet.js");
             if (_module != null)
             {
@@ -97,42 +93,47 @@
             }
         }
     }
-
-    async ValueTask IAsyncDisposable.DisposeAsync()
-    {
-        if (_module is not null)
-        {
-            await _module.DisposeAsync();
-        }
-    }
-
+    
+    // adds a polygon to the map
     private async Task AddPolygon(Polygon poly)
     {
         if (_module != null)
         {
-            if (poly.RawInput == null)
+            // ensure they actually entered a polygon
+            if (string.IsNullOrEmpty(poly.RawInput))
             {
                 Snackbar.Add("Please input a polygon", Severity.Warning);
                 return;
             }
-            
-            poly.RawGeoJson = poly.Type == PolygonTypes.GeoJson
-                ? poly.RawInput
-                : WktToGeoJsonString(poly.RawInput);
 
-            if (_polygons.All(x => x.Name != poly.Name))
+            try
             {
-                Snackbar.Add("Cannot add duplicate names", Severity.Error);
-                return;
-            }
+                // if the raw input is geojson, just use that, if it's a wkt, parse it into geojson
+                poly.RawGeoJson = poly.Type == PolygonTypes.GeoJson
+                    ? poly.RawInput
+                    : WktToGeoJsonString(poly.RawInput);
 
-            await _module.InvokeVoidAsync("add_geojson", poly.RawGeoJson, poly.Name, poly.HexColor);
+                // ensure there are no duplicates 
+                if (_polygons.All(x => x.Name != poly.Name))
+                {
+                    Snackbar.Add("Cannot add duplicate names", Severity.Error);
+                    return;
+                }
+            
+                // add the geojson to the map
+                await _module.InvokeVoidAsync("add_geojson", poly.RawGeoJson, poly.Name, poly.HexColor);
+            }
+            catch (ArgumentException)
+            {
+                Snackbar.Add("Could not parse wkt", Severity.Error);
+            }
         }
     }
 
+    // removes a polygon from the map
     private async Task RemovePolygon(string? name)
     {
-        if (_module != null && name != null)
+        if (_module != null && !string.IsNullOrEmpty(name))
         {
             await _module.InvokeVoidAsync("remove_geo", name);
             var toRemove = _polygons.First(x => x.Name == name);
@@ -152,15 +153,25 @@
             }
         }
     }
-
+    
+    // converts a wkt to geoJson
     private string WktToGeoJsonString(string? wkt)
     {
+        // read the wkt string
         var wktReader = new WKTReader();
         var geo = wktReader.Read(wkt) ?? throw new ArgumentException();
 
         var geoJsonWriter = new GeoJsonWriter();
         var geoJsonString = geoJsonWriter.Write(geo);
         return geoJsonString;
+    }
+    
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
     }
 
 }

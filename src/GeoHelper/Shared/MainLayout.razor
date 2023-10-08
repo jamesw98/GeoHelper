@@ -1,14 +1,36 @@
 ﻿@inherits LayoutComponentBase
 
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
 <MudThemeProvider IsDarkMode="true"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
 <MudLayout>
     <MudAppBar>
-        Geometry Viewer
+        <MudText>
+            Geometry Viewer
+        </MudText>
+        <MudSpacer/>
+        <MudButton OnClick="OpenAbout">
+            About
+        </MudButton>
+        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" 
+                       Color="Color.Inherit" 
+                       OnClick="@(() => { NavigationManager.NavigateTo("https://github.com/jamesw98/GeoHelper"); })"/>
     </MudAppBar>
     <MudMainContent>
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code {
+
+    private void OpenAbout()
+    {
+        var options = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        DialogService.Show<AboutDialog>("About", options);
+    }
+
+}

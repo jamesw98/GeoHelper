@@ -1,0 +1,41 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1">
+            This site is inspired by
+            <u>
+                <a href="https://github.com/clydedacruz/openstreetmap-wkt-playground">openstreetmap-wkt-playground</a>
+            </u>.
+        </MudText>
+        <br/>
+        <MudText>
+            No Nuget map packages were used, as all the of the existing ones I tried were very cumbersome and didn't quite fit what I wanted them to do.
+        </MudText>
+        <MudText>
+            This just uses Leaflet through JSInterop. Originally based on 
+            <u>
+                <a href="https://github.com/ichim/Blazor-WebAssembly/blob/main/leaflet_openstreet/leaflet_openstreet/wwwroot/leafletmap.js">
+                    ichim's Blazor-WebAssembly repo
+                </a>
+            </u>.
+        </MudText>
+        <br/>
+        <MudText>
+            <u>
+                <a href="https://gist.github.com/JoshuaCarroll/49630cbeeb254a49986e939a26672e9c">
+                    Some example wkts can be found here if you don't have any of your own to try
+                </a>
+            </u>.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+}
