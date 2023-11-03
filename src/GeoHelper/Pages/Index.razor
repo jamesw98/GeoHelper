@@ -8,68 +8,65 @@
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
 
-<div id="map" style="width:90%; height:700px;"></div>
-
 <br/>
-
-<MudContainer MaxWidth="MaxWidth.Small" class="align-content-center">
-    <MudItem xs="12" sm="4">
-        <div class="d-flex">
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       OnClick="@(() => { _polygons.Add(new Polygon()); })">
-                Add Additional Polygon
-            </MudButton>
-        </div>
-    </MudItem>
-</MudContainer>
-
 <MudContainer MaxWidth="MaxWidth.ExtraLarge">
-    @foreach (var polygon in _polygons)
-    {
-        <MudItem xs="12" sm="10">
-            <MudPaper Class="pa-4">
-                <div class="d-flex">
-                    <MudTextField Label="Name" Class="mt-3" Variant="Variant.Outlined"
-                                  @bind-Value="polygon.Name" For="@(() => polygon.Name)"/>
-                    <div style="flex-grow: 0.05"/>
-                    <MudSelect Label="Type" class="mt-3" Variant="Variant.Outlined"
-                               T="PolygonTypes" @bind-Value="@polygon.Type" For="@(() => polygon.Type)">
-                        <MudSelectItem T="PolygonTypes" Value="PolygonTypes.Wkt"></MudSelectItem>
-                        <MudSelectItem T="PolygonTypes" Value="PolygonTypes.GeoJson"></MudSelectItem>
-                    </MudSelect>
-                    <div style="flex-grow: 0.05"/>
-                    <MudTextField Label="Polygon" Class="mt-3" Variant="Variant.Outlined"
-                                  @bind-Value="polygon.RawInput" For="@(() => polygon.RawInput)"/>
-                    <div style="flex-grow: 0.05"/>
-                    <MudColorPicker @bind-Text="@polygon.HexColor" Label="Spectrum" 
-                                    ColorPickerView="ColorPickerView.Spectrum" />
-                    <div style="flex-grow: 0.05"/>
-                    <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" VerticalAlign="true" OverrideStyles="false">
-                        <MudButton Variant="Variant.Outlined"
-                                   OnClick="@(async () => { await AddPolygon(polygon); })"
-                                   Color="Color.Success">
-                            Create
-                        </MudButton>
-                        <br style="margin-top: 5px"/>
-                        <MudButton Variant="Variant.Outlined"
-                                   OnClick="@(async () => { await RemovePolygon(polygon.Name); })"
-                                   Color="Color.Error">
-                            Remove
-                        </MudButton>
-                    </MudButtonGroup>
-                </div>
-            </MudPaper>
+    <MudGrid Spacing="0">
+        <MudItem xs="12" sm="7">
+            <div id="map" style="width:100%; height:700px;"/>
         </MudItem>
-        <br/>
-    }
-
+        <MudItem xs="12" sm="5">
+            <div class="d-flex" style="justify-content: center">
+                <MudButton Variant="Variant.Filled" class="mb-1"
+                           Color="Color.Primary"
+                           OnClick="@(() => { _polygons.Add(new Polygon() { HexColor = "#0000ff" }); })">
+                    Add Additional Polygon
+                </MudButton>
+            </div>
+            @foreach (var polygon in _polygons)
+            {
+                <MudPaper Class="pa-4">
+                    <div class="d-flex">
+                        <MudTextField Label="Name" Class="m-3" Variant="Variant.Outlined"
+                                      @bind-Value="polygon.Name" For="@(() => polygon.Name)"/>
+                        <div style="flex-grow: 0.05"/>
+                        <MudSelect Label="Type" class="m-3" Variant="Variant.Outlined"
+                                   T="PolygonTypes" @bind-Value="@polygon.Type" For="@(() => polygon.Type)">
+                            <MudSelectItem T="PolygonTypes" Value="PolygonTypes.Wkt"></MudSelectItem>
+                            <MudSelectItem T="PolygonTypes" Value="PolygonTypes.GeoJson"></MudSelectItem>
+                        </MudSelect>
+                        <div style="flex-grow: 0.05"/>
+                        <MudColorPicker @bind-Text="@polygon.HexColor" Label="Spectrum"
+                                        ColorPickerView="ColorPickerView.Spectrum"/>
+                        <div style="flex-grow: 0.05"/>
+                        <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" VerticalAlign="true" OverrideStyles="false">
+                            <MudButton Variant="Variant.Outlined" class="ms-3 me-3"
+                                       OnClick="@(async () => { await AddPolygon(polygon); })"
+                                       Color="Color.Success">
+                                Create
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" class="ms-3 me-3 mt-1"
+                                       OnClick="@(async () => { await RemovePolygon(polygon.Name); })"
+                                       Color="Color.Error">
+                                Remove
+                            </MudButton>
+                        </MudButtonGroup>
+                    </div>
+                    <div class="d-flex">
+                        <div style="flex-grow: 0.05"/>
+                        <MudTextField Label="Polygon" Class="mt-3" Variant="Variant.Outlined"
+                                      @bind-Value="polygon.RawInput" For="@(() => polygon.RawInput)"/>
+                    </div>
+                </MudPaper>
+                <br/>
+            }
+        </MudItem>
+    </MudGrid>
 </MudContainer>
 
 @code {
     private IJSObjectReference? _module;
     private List<Polygon> _polygons = new();
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -78,7 +75,7 @@
             if (_module != null)
             {
                 await _module.InvokeAsync<string>("load_map");
-        
+
                 var defaultPolygon = new Polygon
                 {
                     Name = "Default WKT",
@@ -86,14 +83,14 @@
                     RawInput = await Http.GetStringAsync("sample-data/defaultWkt.txt"),
                     Type = PolygonTypes.Wkt
                 };
-                
+
                 _polygons.Add(defaultPolygon);
                 await AddPolygon(defaultPolygon);
                 StateHasChanged();
             }
         }
     }
-    
+
     // adds a polygon to the map
     private async Task AddPolygon(Polygon poly)
     {
@@ -119,13 +116,17 @@
                     Snackbar.Add("Cannot add duplicate names", Severity.Error);
                     return;
                 }
-            
-                // add the geojson to the map
+
+            // add the geojson to the map
                 await _module.InvokeVoidAsync("add_geojson", poly.RawGeoJson, poly.Name, poly.HexColor);
             }
-            catch (ArgumentException)
+            catch (Exception e) when (e is ArgumentException or ParseException)
             {
-                Snackbar.Add("Could not parse wkt", Severity.Error);
+                Snackbar.Add("Failed to parse geometry.", Severity.Error);
+            }
+            catch (Exception)
+            {
+                Snackbar.Add("An unexpected error occured. Please check your settings.");
             }
         }
     }
@@ -153,9 +154,9 @@
             }
         }
     }
-    
+
     // converts a wkt to geoJson
-    private string WktToGeoJsonString(string? wkt)
+    private static string WktToGeoJsonString(string? wkt)
     {
         // read the wkt string
         var wktReader = new WKTReader();
@@ -165,7 +166,7 @@
         var geoJsonString = geoJsonWriter.Write(geo);
         return geoJsonString;
     }
-    
+
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
         if (_module is not null)
