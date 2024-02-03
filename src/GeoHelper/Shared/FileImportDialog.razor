@@ -1,0 +1,166 @@
+﻿@using GeoHelper.Services
+@using GeoHelper.Models
+
+@inject ISnackbar Snackbar
+@inject ShapefileService Shapefile
+@inject IJSRuntime JsRuntime
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h4">DBF file</MudText>
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                       AppendMultipleFiles
+                       OnFilesChanged="OnDbfFileChanged"
+                       Hidden="@false"
+                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
+                       InputStyle="opacity:0"
+                       @ondragenter="@SetDragClass"
+                       @ondragleave="@ClearDragClass"
+                       @ondragend="@ClearDragClass">
+            <ButtonTemplate>
+                <MudPaper Height="300px"
+                          Outlined="true"
+                          Class="@_dragClass">
+                    <MudText Typo="Typo.h6">
+                        Drag and drop file here or click
+                    </MudText>
+                    @if (_dbfFile != null)
+                    {
+                        <MudChip Color="Color.Dark" Text="@_dbfFile.Name"/>
+                    }
+                </MudPaper>
+                <MudToolBar DisableGutters="true"
+                            Class="relative d-flex justify-end gap-4 z-30">
+                    <MudSelect T="string" Label="Display field" Disabled="@(_dbfFile == null)"> 
+                        @foreach (var field in _displayOptions ?? new string[]{})
+                        {
+                            <MudSelectItem Value="@field"/>
+                        }
+                    </MudSelect>
+                </MudToolBar>
+            </ButtonTemplate>
+        </MudFileUpload>
+        <MudSpacer/>
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                       AppendMultipleFiles
+                       OnFilesChanged="OnShpFileChanged"
+                       Hidden="@false"
+                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
+                       InputStyle="opacity:0"
+                       Disabled="@(_dbfFile == null)"
+                       @ondragenter="@SetDragClass"
+                       @ondragleave="@ClearDragClass"
+                       @ondragend="@ClearDragClass">
+            <ButtonTemplate>
+                <MudPaper Height="300px"
+                          Outlined="true"
+                          Class="@_dragClass">
+                    <MudText Typo="Typo.h6">
+                        @(_dbfFile == null ? "Please upload a dbf file first" : "Drag and drop file here or click")
+                    </MudText>
+                    @if (_dbfFile != null)
+                    {
+                        <MudChip Color="Color.Dark" Text="@_dbfFile.Name"/>
+                    }
+                </MudPaper>
+                <MudToolBar DisableGutters="true"
+                            Class="relative d-flex justify-end gap-4 z-30">
+                    <MudButton OnClick="@Upload"
+                               Color="Color.Primary"
+                               Disabled="@(_dbfFile == null)"
+                               Variant="Variant.Filled">
+                        Upload
+                    </MudButton>
+                    <MudButton OnClick="@Clear"
+                               Color="Color.Error"
+                               Disabled="@(_dbfFile == null)"
+                               Variant="Variant.Filled">
+                        Clear
+                    </MudButton>
+                </MudToolBar>
+            </ButtonTemplate>
+        </MudFileUpload>
+    </DialogContent>
+</MudDialog>
+
+@code {
+
+    private const long WarningFileSize = 500000000;
+    private bool Warning = false;
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
+    private string _dragClass = DefaultDragClass;
+    
+    private IBrowserFile? _dbfFile;
+    private string[]? _displayOptions;
+    private string? _selectedOption;
+
+    private IBrowserFile? _shpFile;
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public EventCallback<List<Polygon>> PolygonsAddedMethod { get; set; }
+    
+    private IJSObjectReference? _module;
+    private List<Polygon> _polygons = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./leaflet.js");
+        }
+    }
+
+    private async Task Clear()
+    {
+        ClearDragClass();
+        await Task.Delay(100);
+        _dbfFile = null;
+    }
+
+    private async Task OnDbfFileChanged(InputFileChangeEventArgs e)
+    {
+        ClearDragClass();
+        _dbfFile = e.GetMultipleFiles().First();
+        Warning = _dbfFile.Size >= WarningFileSize;
+
+        var x = _dbfFile.OpenReadStream(WarningFileSize);
+        using var streamRef = new DotNetStreamReference(x, leaveOpen: false);
+        await _module.InvokeVoidAsync("streamToJavaScript", streamRef);
+        // await JsRuntime.InvokeVoidAsync("streamToJavaScript", streamRef);
+    }
+    
+    private void OnShpFileChanged(InputFileChangeEventArgs e)
+    {
+        ClearDragClass();
+        _shpFile = e.GetMultipleFiles().First();
+        Warning = _shpFile.Size >= WarningFileSize;
+    }
+
+    private async Task Upload()
+    {
+        if (_dbfFile == null)
+        {
+            Snackbar.Add("Please select a file to upload.", Severity.Error);
+            return;
+        }
+
+        if (_selectedOption == null)
+        {
+            Snackbar.Add("Please select a display option field.", Severity.Error);
+            return;
+        }
+        
+        // var polygons = Shapefile.ReadShapefile(_dbfFile);
+        // await PolygonsAddedMethod.InvokeAsync(polygons);
+    }
+
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
+
+}
