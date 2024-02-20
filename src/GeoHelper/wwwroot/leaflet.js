@@ -1,11 +1,20 @@
-export async function streamToJavaScript(streamRef) {
+// TODO: optionally pass in a key to look up the dbf name field
+export async function importFile(streamRef) {
     const data = await streamRef.arrayBuffer();
     const geojson = await shp(data);
+    
     let count = 0;
     geojson.features.forEach((feat) => {
         let hex = '#'+(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0');
         add_geojson_internal(feat, `test ${count++}`, hex)
     });
+    return result;
+}
+
+export async function importDbf(streamRef) {
+    const data = await streamRef.arrayBuffer();
+    let dbf = shp.parseDbf(data);
+    return Object.keys(dbf[0]);
 }
 
 const map = L.map('map').setView({ lon: -84.386330, lat: 33.753746  }, 5);

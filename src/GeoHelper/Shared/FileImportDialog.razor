@@ -1,5 +1,6 @@
 ﻿@using GeoHelper.Services
 @using GeoHelper.Models
+@using NetTopologySuite.Features
 
 @inject ISnackbar Snackbar
 @inject ShapefileService Shapefile
@@ -128,8 +129,11 @@
 
         var x = _dbfFile.OpenReadStream(WarningFileSize);
         using var streamRef = new DotNetStreamReference(x, leaveOpen: false);
-        await _module.InvokeVoidAsync("streamToJavaScript", streamRef);
-        // await JsRuntime.InvokeVoidAsync("streamToJavaScript", streamRef);
+        if (_module != null)
+        {
+            // await _module.InvokeVoidAsync("importDbf", streamRef);
+            await _module.InvokeVoidAsync("importFile", streamRef);
+        }
     }
     
     private void OnShpFileChanged(InputFileChangeEventArgs e)
