@@ -1,14 +1,26 @@
-// TODO: optionally pass in a key to look up the dbf name field
 export async function importFile(streamRef) {
     const data = await streamRef.arrayBuffer();
     const geojson = await shp(data);
     
     let count = 0;
     geojson.features.forEach((feat) => {
+        
+        let name = "";
+        if (feat.properties){
+            Object.keys(feat.properties).forEach((key) => {
+                name += `<b>${key}:</b> ${feat.properties[key]}<br>`;
+            });
+        }
+        
+        if (!name) {
+            name = `<b>Polygon:</b> ${count++}`;
+        }
+        
+        name += "<br><br>Right-click to remove."
+        
         let hex = '#'+(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0');
-        add_geojson_internal(feat, `test ${count++}`, hex)
+        add_geojson_internal(feat, name, hex)
     });
-    return result;
 }
 
 export async function importDbf(streamRef) {
@@ -40,6 +52,10 @@ export function add_geojson_internal(geojson, name, hex) {
     });
     geo.on('mouseout', function(e){
         geo.closeTooltip();
+    });
+    
+    geo.on("contextmenu", function(e) {
+       geo.remove()
     });
 
     // add it to the map
@@ -78,6 +94,4 @@ export function remove_geo(name) {
     goesByName[name].remove()
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+

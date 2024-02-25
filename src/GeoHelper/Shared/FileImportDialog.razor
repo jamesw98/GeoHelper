@@ -1,17 +1,13 @@
-﻿@using GeoHelper.Services
-@using GeoHelper.Models
-@using NetTopologySuite.Features
+﻿@using GeoHelper.Models
 
 @inject ISnackbar Snackbar
-@inject ShapefileService Shapefile
 @inject IJSRuntime JsRuntime
 
 <MudDialog>
     <DialogContent>
-        <MudText Typo="Typo.h4">DBF file</MudText>
         <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                        AppendMultipleFiles
-                       OnFilesChanged="OnDbfFileChanged"
+                       OnFilesChanged="OnFileChanged"
                        Hidden="@false"
                        InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
                        InputStyle="opacity:0"
@@ -19,66 +15,26 @@
                        @ondragleave="@ClearDragClass"
                        @ondragend="@ClearDragClass">
             <ButtonTemplate>
-                <MudPaper Height="300px"
+                <MudPaper Height="100px"
                           Outlined="true"
                           Class="@_dragClass">
-                    <MudText Typo="Typo.h6">
-                        Drag and drop file here or click
+                    <MudText Typo="Typo.subtitle2">
+                        Upload a zip file that contains at least a .shp file. If a .dbf file is also in the zip,
+                        properties will be added to the tool tip.
                     </MudText>
-                    @if (_dbfFile != null)
+                    @if (_file != null)
                     {
-                        <MudChip Color="Color.Dark" Text="@_dbfFile.Name"/>
+                        <MudChip Color="Color.Dark" Text="@_file.Name"/>
                     }
                 </MudPaper>
-                <MudToolBar DisableGutters="true"
-                            Class="relative d-flex justify-end gap-4 z-30">
-                    <MudSelect T="string" Label="Display field" Disabled="@(_dbfFile == null)"> 
-                        @foreach (var field in _displayOptions ?? new string[]{})
-                        {
-                            <MudSelectItem Value="@field"/>
-                        }
-                    </MudSelect>
-                </MudToolBar>
-            </ButtonTemplate>
-        </MudFileUpload>
-        <MudSpacer/>
-        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                       AppendMultipleFiles
-                       OnFilesChanged="OnShpFileChanged"
-                       Hidden="@false"
-                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
-                       InputStyle="opacity:0"
-                       Disabled="@(_dbfFile == null)"
-                       @ondragenter="@SetDragClass"
-                       @ondragleave="@ClearDragClass"
-                       @ondragend="@ClearDragClass">
-            <ButtonTemplate>
-                <MudPaper Height="300px"
-                          Outlined="true"
-                          Class="@_dragClass">
-                    <MudText Typo="Typo.h6">
-                        @(_dbfFile == null ? "Please upload a dbf file first" : "Drag and drop file here or click")
-                    </MudText>
-                    @if (_dbfFile != null)
-                    {
-                        <MudChip Color="Color.Dark" Text="@_dbfFile.Name"/>
-                    }
-                </MudPaper>
-                <MudToolBar DisableGutters="true"
-                            Class="relative d-flex justify-end gap-4 z-30">
-                    <MudButton OnClick="@Upload"
+                 <MudToolBar DisableGutters="true" Class="relative d-flex justify-end gap-4 z-30">
+                    <MudButton HtmlTag="label"
                                Color="Color.Primary"
-                               Disabled="@(_dbfFile == null)"
-                               Variant="Variant.Filled">
-                        Upload
+                               Variant="Variant.Filled"
+                               OnClick="Upload">
+                        Import
                     </MudButton>
-                    <MudButton OnClick="@Clear"
-                               Color="Color.Error"
-                               Disabled="@(_dbfFile == null)"
-                               Variant="Variant.Filled">
-                        Clear
-                    </MudButton>
-                </MudToolBar>
+                 </MudToolBar>
             </ButtonTemplate>
         </MudFileUpload>
     </DialogContent>
@@ -91,11 +47,7 @@
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
     private string _dragClass = DefaultDragClass;
     
-    private IBrowserFile? _dbfFile;
-    private string[]? _displayOptions;
-    private string? _selectedOption;
-
-    private IBrowserFile? _shpFile;
+    private IBrowserFile? _file;
 
     [CascadingParameter]
     MudDialogInstance MudDialog { get; set; }
@@ -114,51 +66,27 @@
         }
     }
 
-    private async Task Clear()
+    private void OnFileChanged(InputFileChangeEventArgs e)
     {
         ClearDragClass();
-        await Task.Delay(100);
-        _dbfFile = null;
-    }
-
-    private async Task OnDbfFileChanged(InputFileChangeEventArgs e)
-    {
-        ClearDragClass();
-        _dbfFile = e.GetMultipleFiles().First();
-        Warning = _dbfFile.Size >= WarningFileSize;
-
-        var x = _dbfFile.OpenReadStream(WarningFileSize);
-        using var streamRef = new DotNetStreamReference(x, leaveOpen: false);
-        if (_module != null)
-        {
-            // await _module.InvokeVoidAsync("importDbf", streamRef);
-            await _module.InvokeVoidAsync("importFile", streamRef);
-        }
+        _file = e.GetMultipleFiles().First();
+        Warning = _file.Size >= WarningFileSize;
     }
     
-    private void OnShpFileChanged(InputFileChangeEventArgs e)
-    {
-        ClearDragClass();
-        _shpFile = e.GetMultipleFiles().First();
-        Warning = _shpFile.Size >= WarningFileSize;
-    }
-
     private async Task Upload()
     {
-        if (_dbfFile == null)
+        if (_file == null)
         {
             Snackbar.Add("Please select a file to upload.", Severity.Error);
             return;
         }
 
-        if (_selectedOption == null)
+        using var streamRef = new DotNetStreamReference(_file.OpenReadStream(WarningFileSize), leaveOpen: false);
+        if (_module != null)
         {
-            Snackbar.Add("Please select a display option field.", Severity.Error);
-            return;
+            await _module.InvokeVoidAsync("importFile", streamRef);
+            MudDialog.Close();
         }
-        
-        // var polygons = Shapefile.ReadShapefile(_dbfFile);
-        // await PolygonsAddedMethod.InvokeAsync(polygons);
     }
 
     private void SetDragClass()

@@ -189,7 +189,7 @@
             { "PolygonsAddedMethod", EventCallback.Factory.Create<List<Polygon>>(this, AddPolygons) }
         };
         var options = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true };
-        await DialogService.ShowAsync<FileImportDialog>("Import Shapefile", parameters, options);
+        await DialogService.ShowAsync<FileImportDialog>("File Import", parameters, options);
         // await DialogService.ShowAsync<FileImportDialog>("Import Shapefile", parameters);
     }
 
