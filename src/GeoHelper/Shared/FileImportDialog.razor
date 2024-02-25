@@ -1,0 +1,98 @@
+﻿@using GeoHelper.Models
+
+@inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
+
+<MudDialog>
+    <DialogContent>
+        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                       AppendMultipleFiles
+                       OnFilesChanged="OnFileChanged"
+                       Hidden="@false"
+                       InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
+                       InputStyle="opacity:0"
+                       @ondragenter="@SetDragClass"
+                       @ondragleave="@ClearDragClass"
+                       @ondragend="@ClearDragClass">
+            <ButtonTemplate>
+                <MudPaper Height="100px"
+                          Outlined="true"
+                          Class="@_dragClass">
+                    <MudText Typo="Typo.subtitle2">
+                        Upload a zip file that contains at least a .shp file. If a .dbf file is also in the zip,
+                        properties will be added to the tool tip.
+                    </MudText>
+                    @if (_file != null)
+                    {
+                        <MudChip Color="Color.Dark" Text="@_file.Name"/>
+                    }
+                </MudPaper>
+                 <MudToolBar DisableGutters="true" Class="relative d-flex justify-end gap-4 z-30">
+                    <MudButton HtmlTag="label"
+                               Color="Color.Primary"
+                               Variant="Variant.Filled"
+                               OnClick="Upload">
+                        Import
+                    </MudButton>
+                 </MudToolBar>
+            </ButtonTemplate>
+        </MudFileUpload>
+    </DialogContent>
+</MudDialog>
+
+@code {
+
+    private const long WarningFileSize = 500000000;
+    private bool Warning = false;
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
+    private string _dragClass = DefaultDragClass;
+    
+    private IBrowserFile? _file;
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public EventCallback<List<Polygon>> PolygonsAddedMethod { get; set; }
+    
+    private IJSObjectReference? _module;
+    private List<Polygon> _polygons = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./leaflet.js");
+        }
+    }
+
+    private void OnFileChanged(InputFileChangeEventArgs e)
+    {
+        ClearDragClass();
+        _file = e.GetMultipleFiles().First();
+        Warning = _file.Size >= WarningFileSize;
+    }
+    
+    private async Task Upload()
+    {
+        if (_file == null)
+        {
+            Snackbar.Add("Please select a file to upload.", Severity.Error);
+            return;
+        }
+
+        using var streamRef = new DotNetStreamReference(_file.OpenReadStream(WarningFileSize), leaveOpen: false);
+        if (_module != null)
+        {
+            await _module.InvokeVoidAsync("importFile", streamRef);
+            MudDialog.Close();
+        }
+    }
+
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
+
+}

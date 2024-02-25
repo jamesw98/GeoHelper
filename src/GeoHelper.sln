@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoHelper", "GeoHelper\GeoHelper.csproj", "{3377D3D1-014B-4ACE-B376-0AF89F14964E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetTopologySuite.IO.Esri.Shapefile", "NetTopologySuite.IO.Esri.Shapefile\NetTopologySuite.IO.Esri.Shapefile.csproj", "{EDDAA9F7-51E0-4946-BC2B-266CB87276DA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{3377D3D1-014B-4ACE-B376-0AF89F14964E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3377D3D1-014B-4ACE-B376-0AF89F14964E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3377D3D1-014B-4ACE-B376-0AF89F14964E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDDAA9F7-51E0-4946-BC2B-266CB87276DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDDAA9F7-51E0-4946-BC2B-266CB87276DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDDAA9F7-51E0-4946-BC2B-266CB87276DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDDAA9F7-51E0-4946-BC2B-266CB87276DA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

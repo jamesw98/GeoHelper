@@ -7,6 +7,7 @@
 
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <br/>
 <MudContainer MaxWidth="MaxWidth.ExtraLarge">
@@ -20,6 +21,12 @@
                            Color="Color.Primary"
                            OnClick="@(() => { _polygons.Add(new Polygon() { HexColor = "#0000ff" }); })">
                     Add Additional Polygon
+                </MudButton>
+                <MudSpacer/>
+                <MudButton Variant="Variant.Filled" class="mb-1"
+                           Color="Color.Primary"
+                           OnClick="OpenImport">
+                    Import Shapefile
                 </MudButton>
             </div>
             @foreach (var polygon in _polygons)
@@ -131,6 +138,14 @@
         }
     }
 
+    public async Task AddPolygons(List<Polygon> polygons)
+    {
+        foreach (var poly in polygons)
+        {
+            await AddPolygon(poly);
+        }
+    }
+
     // removes a polygon from the map
     private async Task RemovePolygon(string? name)
     {
@@ -150,7 +165,7 @@
                 toRemove.Name = null;
                 toRemove.RawGeoJson = null;
                 toRemove.RawInput = null;
-                toRemove.HexColor = null;
+                toRemove.HexColor = "#0000ff";
             }
         }
     }
@@ -165,6 +180,17 @@
         var geoJsonWriter = new GeoJsonWriter();
         var geoJsonString = geoJsonWriter.Write(geo);
         return geoJsonString;
+    }
+    
+    private async Task OpenImport()
+    {
+        DialogParameters parameters = new()
+        {
+            { "PolygonsAddedMethod", EventCallback.Factory.Create<List<Polygon>>(this, AddPolygons) }
+        };
+        var options = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<FileImportDialog>("File Import", parameters, options);
+        // await DialogService.ShowAsync<FileImportDialog>("Import Shapefile", parameters);
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
