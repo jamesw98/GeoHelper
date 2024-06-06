@@ -149,9 +149,13 @@
     // removes a polygon from the map
     private async Task RemovePolygon(string? name)
     {
-        if (_module != null && !string.IsNullOrEmpty(name))
+        if (_module != null)
         {
-            await _module.InvokeVoidAsync("remove_geo", name);
+            // If the name of the polygon isn't null, attempt to remove it from the map via js interop.
+            if (!string.IsNullOrEmpty(name))
+            {
+                await _module.InvokeVoidAsync("remove_geo", name);
+            }
             var toRemove = _polygons.First(x => x.Name == name);
 
             // if we have more than one polygon, just remove it from the list
@@ -190,7 +194,6 @@
         };
         var options = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true };
         await DialogService.ShowAsync<FileImportDialog>("File Import", parameters, options);
-        // await DialogService.ShowAsync<FileImportDialog>("Import Shapefile", parameters);
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
