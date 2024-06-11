@@ -8,6 +8,7 @@
 @using Color = MudBlazor.Color
 @using Polygon = GeoHelper.Models.Polygon
 @using System.Drawing
+@using GeoHelper.Utils
 @using H3
 @inject HttpClient Http
 @implements IAsyncDisposable
@@ -138,11 +139,18 @@
             foreach (var poly in _polygons)
             {
                 var color = $"#{random.Next(0x1000000):X6}";
-                var hexes = GetH3HexesForPoly(poly);
-                foreach (var (id, hex) in hexes)
+                try
                 {
-                    _hexIds.Add(id);
-                    await _module!.InvokeVoidAsync("add_geojson", hex, id, color);
+                    var hexes = GeoUtils.GetH3HexesForPolygon(poly, _hexResolution);
+                    foreach (var (id, hex) in hexes)
+                    {
+                        _hexIds.Add(id);
+                        await _module!.InvokeVoidAsync("add_geojson", hex, id, color);
+                    }
+                }
+                catch (ArgumentException e)
+                {
+                    Snackbar.Add(e.Message, Severity.Error);
                 }
             }    
         }
@@ -161,37 +169,23 @@
     {
         if (_module != null)
         {
-            // ensure they actually entered a polygon
-            if (string.IsNullOrEmpty(poly.RawInput))
-            {
-                Snackbar.Add("Please input a polygon", Severity.Warning);
-                return;
-            }
-
             try
             {
-                // if the raw input is geojson, just use that, if it's a wkt, parse it into geojson
-                poly.RawGeoJson = poly.Type == PolygonTypes.GeoJson
-                    ? poly.RawInput
-                    : WktToGeoJsonString(poly.RawInput);
+                GeoUtils.PreparePolygon(poly);
 
-                // ensure there are no duplicates 
+                // Ensure there are no duplicates 
                 if (_polygons.All(x => x.Name != poly.Name))
                 {
                     Snackbar.Add("Cannot add duplicate names", Severity.Error);
                     return;
                 }
 
-                // add the geojson to the map
+                // Add the geojson to the map
                 await _module.InvokeVoidAsync("add_geojson", poly.RawGeoJson, poly.Name, poly.HexColor);
             }
-            catch (Exception e) when (e is ArgumentException or ParseException)
+            catch (ArgumentException e)
             {
-                Snackbar.Add("Failed to parse geometry.", Severity.Error);
-            }
-            catch (Exception)
-            {
-                Snackbar.Add("An unexpected error occured. Please check your settings.");
+                Snackbar.Add(e.Message, Severity.Error);
             }
         }
     }
@@ -234,52 +228,6 @@
             }
         }
     }
-
-    // converts a wkt to geoJson
-    private static string WktToGeoJsonString(string? wkt)
-    {
-        // read the wkt string
-        var wktReader = new WKTReader();
-        var geo = wktReader.Read(wkt) ?? throw new ArgumentException();
-
-        var geoJsonWriter = new GeoJsonWriter();
-        var geoJsonString = geoJsonWriter.Write(geo);
-        return geoJsonString;
-    }
-
-    private Dictionary<string, string> GetH3HexesForPoly(Polygon poly)
-    {
-        var geoJsonReader = new GeoJsonReader();
-        var geoJsonWriter = new GeoJsonWriter();
-        var geo = geoJsonReader.Read<Geometry>(poly.RawGeoJson);
-
-        var hexes = new List<H3Index>();
-        if (geo is MultiPolygon polygons)
-        {
-            foreach (var polygon in polygons.Geometries)
-            {
-                if (polygon is not null)
-                {
-                    hexes.AddRange(polygon.Fill(_hexResolution));
-                }
-            }
-        }
-        else
-        {
-            hexes.AddRange(geo.Fill(_hexResolution));
-        }
-
-        // Yes, it's a magic number, too bad!
-        if (hexes.Count > 100_000)
-        {
-            Snackbar.Add($"Polygon {poly.Name} contains too many hexes at resolution {_hexResolution}!", Severity.Error, options => options.VisibleStateDuration = 3000);
-            return new();
-        }
-        
-        Snackbar.Add($"Polygon {poly.Name} contains {hexes.Count} hexes.", Severity.Info, options => options.VisibleStateDuration = 3000);
-        return hexes.ToDictionary(x => x.ToString(), y => geoJsonWriter.Write(y.GetCellBoundary())); 
-    }
-    
     private async Task OpenImport()
     {
         DialogParameters parameters = new()
