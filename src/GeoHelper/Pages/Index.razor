@@ -2,6 +2,13 @@
 
 @using NetTopologySuite.IO
 @using GeoHelper.Models
+@using H3.Algorithms
+@using H3.Extensions
+@using NetTopologySuite.Geometries
+@using Color = MudBlazor.Color
+@using Polygon = GeoHelper.Models.Polygon
+@using System.Drawing
+@using H3
 @inject HttpClient Http
 @implements IAsyncDisposable
 
@@ -13,6 +20,13 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge">
     <MudGrid Spacing="0">
         <MudItem xs="12" sm="7">
+            @if (_hexResolution >= 5)
+            {
+                <MudAlert Elevation="10" Variant="Variant.Filled" Severity="Severity.Warning" Style="position:fixed; top:10%;left:5%;z-index: 9999999">
+                    Higher resolutions can produce long load times. Polygons that produce too many hexes will not have hexes displayed.
+                </MudAlert>
+            }
+            
             <div id="map" style="width:100%; height:700px;"/>
         </MudItem>
         <MudItem xs="12" sm="5">
@@ -28,6 +42,20 @@
                            OnClick="OpenImport">
                     Import Shapefile
                 </MudButton>
+                <MudSpacer/>
+                <MudSwitch T="bool" Checked="_toggleHexes"
+                           CheckedChanged="async () => { _toggleHexes = !_toggleHexes; HandleCheck(); }"
+                           Label="H3 Hexes"
+                           Color="Color.Info"/>
+                <MudSpacer/>
+                <MudSelect T="int" @bind-Value="@_hexResolution"
+                           Label="Resolution" Variant="Variant.Outlined"
+                           AnchorOrigin="Origin.BottomCenter" Style="width: 50px">
+                    @for (var i = 1; i <= 10; i++)
+                    {
+                        <MudSelectItem T="int" Value="i"/>
+                    }
+                </MudSelect>
             </div>
             @foreach (var polygon in _polygons)
             {
@@ -62,6 +90,7 @@
                         <div style="flex-grow: 0.05"/>
                         <MudTextField Label="Polygon" Class="mt-3" Variant="Variant.Outlined"
                                       @bind-Value="polygon.RawInput" For="@(() => polygon.RawInput)"/>
+                        <div style="flex-grow: 0.05"/>
                     </div>
                 </MudPaper>
                 <br/>
@@ -73,6 +102,9 @@
 @code {
     private IJSObjectReference? _module;
     private List<Polygon> _polygons = new();
+    private List<string> _hexIds = new();
+    private bool _toggleHexes = false;
+    private int _hexResolution = 1;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -98,6 +130,32 @@
         }
     }
 
+    private async Task HandleCheck()
+    {
+        var random = new Random();
+        if (_toggleHexes)
+        {
+            foreach (var poly in _polygons)
+            {
+                var color = $"#{random.Next(0x1000000):X6}";
+                var hexes = GetH3HexesForPoly(poly);
+                foreach (var (id, hex) in hexes)
+                {
+                    _hexIds.Add(id);
+                    await _module!.InvokeVoidAsync("add_geojson", hex, id, color);
+                }
+            }    
+        }
+        else
+        {
+            foreach (var id in _hexIds)
+            {
+                await RemovePolygon(id);
+            }
+            _hexIds = new();
+        }
+    }
+    
     // adds a polygon to the map
     private async Task AddPolygon(Polygon poly)
     {
@@ -124,7 +182,7 @@
                     return;
                 }
 
-            // add the geojson to the map
+                // add the geojson to the map
                 await _module.InvokeVoidAsync("add_geojson", poly.RawGeoJson, poly.Name, poly.HexColor);
             }
             catch (Exception e) when (e is ArgumentException or ParseException)
@@ -156,20 +214,23 @@
             {
                 await _module.InvokeVoidAsync("remove_geo", name);
             }
-            var toRemove = _polygons.First(x => x.Name == name);
+            var toRemove = _polygons.FirstOrDefault(x => x.Name == name);
 
-            // if we have more than one polygon, just remove it from the list
-            if (_polygons.Count > 1)
+            if (toRemove is not null)
             {
-                _polygons.Remove(toRemove);
-            }
-            // if we only have one, just null out the values
-            else
-            {
-                toRemove.Name = null;
-                toRemove.RawGeoJson = null;
-                toRemove.RawInput = null;
-                toRemove.HexColor = "#0000ff";
+                // if we have more than one polygon, just remove it from the list
+                if (_polygons.Count > 1)
+                {
+                    _polygons.Remove(toRemove);
+                }
+                // if we only have one, just null out the values
+                else
+                {
+                    toRemove.Name = null;
+                    toRemove.RawGeoJson = null;
+                    toRemove.RawInput = null;
+                    toRemove.HexColor = "#0000ff";
+                }
             }
         }
     }
@@ -184,6 +245,39 @@
         var geoJsonWriter = new GeoJsonWriter();
         var geoJsonString = geoJsonWriter.Write(geo);
         return geoJsonString;
+    }
+
+    private Dictionary<string, string> GetH3HexesForPoly(Polygon poly)
+    {
+        var geoJsonReader = new GeoJsonReader();
+        var geoJsonWriter = new GeoJsonWriter();
+        var geo = geoJsonReader.Read<Geometry>(poly.RawGeoJson);
+
+        var hexes = new List<H3Index>();
+        if (geo is MultiPolygon polygons)
+        {
+            foreach (var polygon in polygons.Geometries)
+            {
+                if (polygon is not null)
+                {
+                    hexes.AddRange(polygon.Fill(_hexResolution));
+                }
+            }
+        }
+        else
+        {
+            hexes.AddRange(geo.Fill(_hexResolution));
+        }
+
+        // Yes, it's a magic number, too bad!
+        if (hexes.Count > 100_000)
+        {
+            Snackbar.Add($"Polygon {poly.Name} contains too many hexes at resolution {_hexResolution}!", Severity.Error, options => options.VisibleStateDuration = 3000);
+            return new();
+        }
+        
+        Snackbar.Add($"Polygon {poly.Name} contains {hexes.Count} hexes.", Severity.Info, options => options.VisibleStateDuration = 3000);
+        return hexes.ToDictionary(x => x.ToString(), y => geoJsonWriter.Write(y.GetCellBoundary())); 
     }
     
     private async Task OpenImport()

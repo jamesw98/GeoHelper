@@ -12,6 +12,7 @@
         <PackageReference Include="MudBlazor" Version="6.10.0" />
         <PackageReference Include="NetTopologySuite.IO.Esri.Shapefile" Version="1.0.0" />
         <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
+        <PackageReference Include="pocketken.H3" Version="4.0.0" />
     </ItemGroup>
 
 </Project>
