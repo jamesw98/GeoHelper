@@ -7,7 +7,7 @@
   "linkerEnabled": true,
   "resources": {
     "assembly": {
-      "GeoHelper.dll": "sha256-A5rbWtebX\/wqTiyM+SC6ficJLOsAGsh9VUBxbWsagbc=",
+      "GeoHelper.dll": "sha256-HGedQOWRCESHe+hAOOxTOPmk6NR1no79eMPstbvsYjM=",
       "Microsoft.AspNetCore.Components.dll": "sha256-TMI7OQ73cJnhY4l+Gjv9x6mTWEOE0xvY02KWCCOP\/1Q=",
       "Microsoft.AspNetCore.Components.Forms.dll": "sha256-wcPyGU\/T7lzlTPNy+M4AeOL1yYc7qTSAkQwoYJPJdO0=",
       "Microsoft.AspNetCore.Components.Web.dll": "sha256-pxN\/3qGWNdiSXRTWgWfzvPqDHRPp0AlYHSDCyiqeUy4=",
