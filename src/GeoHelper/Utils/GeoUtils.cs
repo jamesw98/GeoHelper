@@ -42,6 +42,15 @@ public static class GeoUtils
         }
     }
 
+    /// <summary>
+    /// Finds H3 hexes that fall within a given polygon or collection of polygons
+    /// </summary>
+    /// <param name="polygon">The polygon or collection to find hexes for.</param>
+    /// <param name="resolution">The resolution of H3 hexes to use.</param>
+    /// <returns>A dictionary with the key being H3 hex id and the value being the boundary of the hex.</returns>
+    /// <exception cref="ArgumentException">
+    /// If too many hexes were found to lie within the provided polygon or collection. See <see cref="HexLimit"/>.
+    /// </exception>
     public static Dictionary<string, string> GetH3HexesForPolygon(Polygon polygon, int resolution)
     {
         // Get the geometry object.
