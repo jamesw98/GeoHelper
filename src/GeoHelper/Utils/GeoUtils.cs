@@ -11,7 +11,7 @@ namespace GeoHelper.Utils;
 public static class GeoUtils
 {
     private const int HexLimit = 100_000;
-    
+
     /// <summary>
     /// Prepares a polygon to be added to the map.
     /// </summary>
@@ -47,11 +47,15 @@ public static class GeoUtils
     /// </summary>
     /// <param name="polygon">The polygon or collection to find hexes for.</param>
     /// <param name="resolution">The resolution of H3 hexes to use.</param>
+    /// <param name="bounds">
+    /// The viewport to get hexes within. This makes it so we can actually get higher resolution hexes for larger
+    /// polygons without killing the browser
+    /// </param>
     /// <returns>A dictionary with the key being H3 hex id and the value being the boundary of the hex.</returns>
     /// <exception cref="ArgumentException">
     /// If too many hexes were found to lie within the provided polygon or collection. See <see cref="HexLimit"/>.
     /// </exception>
-    public static Dictionary<string, string> GetH3HexesForPolygon(Polygon polygon, int resolution)
+    public static Dictionary<string, string> GetH3HexesForPolygon(Polygon polygon, int resolution, LeafletViewport bounds)
     {
         // Get the geometry object.
         var geo = new GeoJsonReader().Read<Geometry>(polygon.RawGeoJson);
@@ -61,13 +65,13 @@ public static class GeoUtils
         switch (geo)
         {
             case MultiPolygon multi:
-                HandleGeometryCollection(multi, resolution, hexes);
+                HandleGeometryCollection(multi, resolution, hexes, bounds);
                 break;
             case GeometryCollection collection:
-                HandleGeometryCollection(collection, resolution, hexes);
+                HandleGeometryCollection(collection, resolution, hexes, bounds);
                 break;
             default:
-                HandlePolygon(geo, resolution, hexes);
+                HandlePolygon(geo, resolution, hexes, bounds);
                 break;
         }
 
@@ -77,10 +81,10 @@ public static class GeoUtils
             throw new ArgumentException($"Polygon {polygon.Name} contains too many hexes" +
                                         $" at resolution {resolution}!");
         }
-        
+
         // Parse the result into a dictionary.
         return hexes
-            .ToDictionary(x => x.ToString(), y => new GeoJsonWriter().Write(y.GetCellBoundary())); 
+            .ToDictionary(x => x.ToString(), y => new GeoJsonWriter().Write(y.GetCellBoundary()));
     }
 
     /// <summary>
@@ -89,34 +93,46 @@ public static class GeoUtils
     /// <param name="polygon">The polygon to find hexes for.</param>
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
-    private static void HandlePolygon(Geometry polygon, int resolution, List<H3Index> hexes)
+    /// <param name="bounds">The viewport to get hexes within.</param>
+    private static void HandlePolygon(Geometry polygon, int resolution, List<H3Index> hexes, LeafletViewport bounds)
     {
-        hexes.AddRange(polygon.Fill(resolution));
+        Console.WriteLine(bounds);
+        var boundingBox = new GeometryFactory().CreatePolygon([
+            new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat), 
+            new Coordinate(bounds.NorthEast.Lng, bounds.SouthWest.Lat), 
+            new Coordinate(bounds.NorthEast.Lng, bounds.NorthEast.Lat), 
+            new Coordinate(bounds.SouthWest.Lng, bounds.NorthEast.Lat), 
+            new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat)
+        ]) ?? throw new ArgumentException($"Could not create bounding box for bounds {bounds}");
+
+        // Get just the hexes that are both within the bounding box and within the requested polygon.
+        hexes.AddRange(boundingBox.Fill(resolution).Where(x => polygon.Contains(x.ToPoint())));
     }
-    
+
     /// <summary>
     /// Finds hexes for a collection of polygons. This works for both GEOMETRYCOLLECTION and MULTIPOLYGON.
     /// </summary>
     /// <param name="collection">The collection to find hexes for.</param>
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
-    private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes)
+    /// <param name="bounds">The viewport to get hexes within.</param>
+    private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes, LeafletViewport bounds)
     {
         foreach (var geo in collection.Geometries)
         {
             if (geo is not null)
             {
-                HandlePolygon(geo, resolution, hexes);
+                HandlePolygon(geo, resolution, hexes, bounds);
             }
         }
     }
-    
+
     /// <summary>
     /// Converts a WKT (well known text) into a geoJson string.
     /// </summary>
     /// <param name="wkt">The WKT to convert.</param>
     /// <returns>A string representation of a geoJson object.</returns>
-    /// <exception cref="ArgumentException">If the WKT could not be parse.</exception>
+    /// <exception cref="ArgumentException">If the WKT could not be parsed.</exception>
     private static string WktToGeoJsonString(string? wkt)
     {
         var geo = new WKTReader().Read(wkt)
