@@ -59,19 +59,24 @@ public static class GeoUtils
     {
         // Get the geometry object.
         var geo = new GeoJsonReader().Read<Geometry>(polygon.RawGeoJson);
+        
+        var boundingBox = new GeometryFactory().CreatePolygon([
+            new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat), 
+            new Coordinate(bounds.NorthEast.Lng, bounds.SouthWest.Lat), 
+            new Coordinate(bounds.NorthEast.Lng, bounds.NorthEast.Lat), 
+            new Coordinate(bounds.SouthWest.Lng, bounds.NorthEast.Lat), 
+            new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat)
+        ]) ?? throw new ArgumentException($"Could not create bounding box for bounds {bounds}");
 
         // Get the hexes that are within the geometry.
         var hexes = new List<H3Index>();
         switch (geo)
         {
-            case MultiPolygon multi:
-                HandleGeometryCollection(multi, resolution, hexes, bounds);
-                break;
             case GeometryCollection collection:
-                HandleGeometryCollection(collection, resolution, hexes, bounds);
+                HandleGeometryCollection(collection, resolution, hexes, boundingBox);
                 break;
             default:
-                HandlePolygon(geo, resolution, hexes, bounds);
+                HandlePolygon(geo, resolution, hexes, boundingBox);
                 break;
         }
 
@@ -93,20 +98,28 @@ public static class GeoUtils
     /// <param name="polygon">The polygon to find hexes for.</param>
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
-    /// <param name="bounds">The viewport to get hexes within.</param>
-    private static void HandlePolygon(Geometry polygon, int resolution, List<H3Index> hexes, LeafletViewport bounds)
+    /// <param name="boundingBox">The viewport to get hexes within.</param>
+    private static void HandlePolygon(Geometry polygon, int resolution, List<H3Index> hexes, Geometry boundingBox)
     {
-        Console.WriteLine(bounds);
-        var boundingBox = new GeometryFactory().CreatePolygon([
-            new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat), 
-            new Coordinate(bounds.NorthEast.Lng, bounds.SouthWest.Lat), 
-            new Coordinate(bounds.NorthEast.Lng, bounds.NorthEast.Lat), 
-            new Coordinate(bounds.SouthWest.Lng, bounds.NorthEast.Lat), 
-            new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat)
-        ]) ?? throw new ArgumentException($"Could not create bounding box for bounds {bounds}");
 
-        // Get just the hexes that are both within the bounding box and within the requested polygon.
-        hexes.AddRange(boundingBox.Fill(resolution).Where(x => polygon.Contains(x.ToPoint())));
+        var intersectPoly = boundingBox.Intersection(polygon);
+        if (intersectPoly is GeometryCollection geoColl)
+        {
+            foreach (var g in geoColl)
+            {
+                if (g is null)
+                {
+                    throw new ArgumentException("Found null geometry when attempting to get hexes.");
+                }
+                hexes.AddRange(g.Fill(resolution));
+            }
+        }
+        else
+        {
+            // Get just the hexes that are both within the bounding box and within the requested polygon.
+            hexes.AddRange(intersectPoly.Fill(resolution));
+        }
+        
     }
 
     /// <summary>
@@ -116,13 +129,13 @@ public static class GeoUtils
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
     /// <param name="bounds">The viewport to get hexes within.</param>
-    private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes, LeafletViewport bounds)
+    private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes, Geometry boundingBox)
     {
         foreach (var geo in collection.Geometries)
         {
             if (geo is not null)
             {
-                HandlePolygon(geo, resolution, hexes, bounds);
+                HandlePolygon(geo, resolution, hexes, boundingBox);
             }
         }
     }
