@@ -15,13 +15,6 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge">
     <MudGrid Spacing="0">
         <MudItem xs="12" sm="7">
-            @if (_hexResolution >= 5)
-            {
-                <MudAlert Elevation="10" Variant="Variant.Filled" Severity="Severity.Warning" Style="position:fixed; top:10%;left:5%;z-index: 9999999">
-                    Higher resolutions can produce long load times. Polygons that produce too many hexes will not have hexes displayed.
-                </MudAlert>
-            }
-            
             <div id="map" style="width:100%; height:700px;"/>
         </MudItem>
         <MudItem xs="12" sm="5">
@@ -101,6 +94,10 @@
     private bool _toggleHexes = false;
     private int _hexResolution = 1;
 
+    /// <summary>
+    /// Code that runs on render.
+    /// </summary>
+    /// <param name="firstRender">If this is the first render.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -125,9 +122,14 @@
         }
     }
 
+    /// <summary>
+    /// Handles the H3 hex toggle switch.
+    /// </summary>
     private async Task HandleCheck()
     {
         var random = new Random();
+        var bounds = await _module!.InvokeAsync<LeafletViewport>("get_viewport");;
+        
         if (_toggleHexes)
         {
             foreach (var poly in _polygons)
@@ -135,7 +137,7 @@
                 var color = $"#{random.Next(0x1000000):X6}";
                 try
                 {
-                    var hexes = GeoUtils.GetH3HexesForPolygon(poly, _hexResolution);
+                    var hexes = GeoUtils.GetH3HexesForPolygon(poly, _hexResolution, bounds);
                     foreach (var (id, hex) in hexes)
                     {
                         _hexIds.Add(id);
@@ -158,19 +160,28 @@
         }
     }
     
-    // adds a polygon to the map
+    /// <summary>
+    /// Adds a single polygon to the map.
+    /// </summary>
+    /// <param name="poly">The polygon to add.</param>
     private async Task AddPolygon(Polygon poly)
     {
         if (_module != null)
         {
             try
             {
+                if (poly.Name is null || poly.Name.Trim() == string.Empty)
+                {
+                    Snackbar.Add("Name cannot be empty.", Severity.Error);
+                    return;
+                }                
+                
                 GeoUtils.PreparePolygon(poly);
 
                 // Ensure there are no duplicates 
                 if (_polygons.All(x => x.Name != poly.Name))
                 {
-                    Snackbar.Add("Cannot add duplicate names", Severity.Error);
+                    Snackbar.Add("Cannot add duplicate names.", Severity.Error);
                     return;
                 }
 
@@ -184,7 +195,11 @@
         }
     }
 
-    public async Task AddPolygons(List<Polygon> polygons)
+    /// <summary>
+    /// Adds multiple polygons to the map. 
+    /// </summary>
+    /// <param name="polygons">The polygons to add.</param>
+    private async Task AddPolygons(List<Polygon> polygons)
     {
         foreach (var poly in polygons)
         {
@@ -192,7 +207,10 @@
         }
     }
 
-    // removes a polygon from the map
+    /// <summary>
+    /// Remove a polygon from the name based on the polygon name.
+    /// </summary>
+    /// <param name="name">The name of the polygon to remove.</param>
     private async Task RemovePolygon(string? name)
     {
         if (_module != null)
@@ -222,6 +240,10 @@
             }
         }
     }
+
+    /// <summary>
+    /// Opens an input dialog.
+    /// </summary>
     private async Task OpenImport()
     {
         DialogParameters parameters = new()
@@ -232,6 +254,9 @@
         await DialogService.ShowAsync<FileImportDialog>("File Import", parameters, options);
     }
 
+    /// <summary>
+    /// Does some cleanup.
+    /// </summary>
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
         if (_module is not null)
