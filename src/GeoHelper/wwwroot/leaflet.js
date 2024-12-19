@@ -29,6 +29,10 @@ export async function importDbf(streamRef) {
     return Object.keys(dbf[0]);
 }
 
+export async function get_viewport() {
+    return map.getBounds();
+}
+
 const map = L.map('map').setView({ lon: -84.386330, lat: 33.753746  }, 5);
 
 let goesByName = {};
