@@ -15,7 +15,7 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge">
     <MudGrid Spacing="0">
         <MudItem xs="12" sm="7">
-            <div id="map" style="width:100%; height:700px;"/>
+            <div id="map" style="width: 100%; height: 700px; background-color: lightgray;"/>
         </MudItem>
         <MudItem xs="12" sm="5">
             <div class="d-flex" style="justify-content: center">
@@ -88,18 +88,89 @@
 </MudContainer>
 
 @code {
+    /// <summary>
+    /// The action to change a nonstatic value from inside a static method.
+    /// Is this a hack? I'm not sure, an example like this was in some msft docs.
+    /// </summary>
+    private static Func<string, Task>? _changeValueAction;
+    
+    /// <summary>
+    /// The JS module to use.
+    /// </summary>
     private IJSObjectReference? _module;
-    private List<Polygon> _polygons = new();
+    
+    /// <summary>
+    /// The polygons to display.
+    /// </summary>
+    private readonly List<Polygon> _polygons = new();
+    
+    /// <summary>
+    /// The h3 hex IDs currently on the map. 
+    /// </summary>
     private List<string> _hexIds = new();
+    
+    /// <summary>
+    /// The current hex toggle switch value.
+    /// </summary>
     private bool _toggleHexes = false;
+    
+    /// <summary>
+    /// The current hex resolution to use.
+    /// </summary>
     private int _hexResolution = 1;
+    
+    /// <summary>
+    /// The number of polygons created via leaflet draw this session.
+    /// </summary>
+    private int _leafletPolygonCount = 1;
 
+    
+    /// <summary>
+    /// The JS Invokable method that creates polygons from leaflet draw.
+    /// </summary>
+    /// <param name="obj"></param>
+    [JSInvokable("AddPolygonFromJs")]
+    public static async Task AddPolygonFromJs(string obj)
+    {
+        if (_changeValueAction is {} actionAsync)
+        {
+            await actionAsync(obj);
+        }
+    }
+    
+    /// <summary>
+    /// Creates a polygon from leaflet draw.
+    /// </summary>
+    /// <param name="value">The geojson string.</param>
+    private async Task CreatePolygonFromLeaflet(string value)
+    {
+        var geo = GeoUtils.GeoJsonStringToPolygon(value);
+        var poly = new Polygon
+        {
+            Name = $"Leaflet Polygon {_leafletPolygonCount++}",
+            RawGeoJson = value,
+            RawInput = geo.AsText(),
+            Type = PolygonTypes.FromLeaflet
+        };
+
+        if (_polygons.Count == 1)
+        {
+            _polygons[0] = poly;
+        }
+        else
+        {
+            _polygons.Add(poly);
+        }
+        StateHasChanged();
+    }
+    
     /// <summary>
     /// Code that runs on render.
     /// </summary>
     /// <param name="firstRender">If this is the first render.</param>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _changeValueAction = CreatePolygonFromLeaflet;
         if (firstRender)
         {
             _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./leaflet.js");
@@ -128,7 +199,7 @@
     private async Task HandleCheck()
     {
         var random = new Random();
-        var bounds = await _module!.InvokeAsync<LeafletViewport>("get_viewport");;
+        var bounds = await _module!.InvokeAsync<LeafletViewport>("get_viewport");
         
         if (_toggleHexes)
         {
@@ -146,6 +217,7 @@
                 }
                 catch (ArgumentException e)
                 {
+                    Console.WriteLine(e);
                     Snackbar.Add(e.Message, Severity.Error);
                 }
             }    

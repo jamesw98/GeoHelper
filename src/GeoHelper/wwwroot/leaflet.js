@@ -34,8 +34,53 @@ export async function get_viewport() {
 }
 
 const map = L.map('map').setView({ lon: -84.386330, lat: 33.753746  }, 5);
+var drawControl = new L.Control.Draw({
+    draw: {
+        marker: false,
+        circle: false,
+        circlemarker: false
+    }
+});
+map.addControl(drawControl);
+
+map.on(L.Draw.Event.CREATED, function (e) {
+    let layer = e.layer;
+    let name = `Leaflet Polygon ${leafletGeoCount++}`
+    
+    layer.bindTooltip(name);
+    layer.on('mouseover', function(e){
+        layer.openTooltip();
+    });
+    layer.on('mouseout', function(e){
+        layer.closeTooltip();
+    });
+    
+    goesByName[name] = layer;
+    map.addLayer(layer);
+    
+    let fixed = fixPolygonCoordinates(layer.toGeoJSON())
+    DotNet.invokeMethodAsync("GeoHelper", "AddPolygonFromJs", JSON.stringify(fixed))
+});
+
+function fixPolygonCoordinates(polygonGeoJSON) {
+    const coordinates = polygonGeoJSON.geometry.coordinates[0]; // Get the exterior ring
+
+    // Calculate the signed area
+    const area = coordinates.reduce((sum, coord, i, arr) => {
+        const next = arr[(i + 1) % arr.length];
+        return sum + (coord[0] * next[1] - next[0] * coord[1]);
+    }, 0);
+
+    // If area is negative, reverse the coordinates
+    if (area < 0) {
+        polygonGeoJSON.geometry.coordinates[0] = coordinates.reverse();
+    }
+
+    return polygonGeoJSON;
+}
 
 let goesByName = {};
+let leafletGeoCount = 1;
 
 export function load_map() {
     // create the tile layer 
@@ -97,5 +142,3 @@ export function add_geojson(raw, name, hex) {
 export function remove_geo(name) {
     goesByName[name].remove()
 }
-
-
