@@ -2,6 +2,7 @@
 using H3;
 using H3.Algorithms;
 using H3.Extensions;
+using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using Polygon = GeoHelper.Models.Polygon;
@@ -11,6 +12,17 @@ namespace GeoHelper.Utils;
 public static class GeoUtils
 {
     private const int HexLimit = 100_000;
+    private static readonly GeoJsonReader Reader = new GeoJsonReader();
+
+    /// <summary>
+    /// Converts a geojson string into a Geometry object.
+    /// </summary>
+    /// <param name="geoJsonString"></param>
+    /// <returns></returns>
+    public static Geometry GeoJsonStringToPolygon(string geoJsonString)
+    {
+        return new GeoJsonReader().Read<IFeature>(geoJsonString).Geometry;
+    }
 
     /// <summary>
     /// Prepares a polygon to be added to the map.
@@ -57,9 +69,12 @@ public static class GeoUtils
     /// </exception>
     public static Dictionary<string, string> GetH3HexesForPolygon(Polygon polygon, int resolution, LeafletViewport bounds)
     {
-        // Get the geometry object.
-        var geo = new GeoJsonReader().Read<Geometry>(polygon.RawGeoJson);
-        
+        // If the polygon is from leaflet, we need to try getting a feature, if not, just get a normal geometry.
+        var geo = polygon.Type == PolygonTypes.FromLeaflet 
+            ? Reader.Read<IFeature>(polygon.RawGeoJson).Geometry 
+            : Reader.Read<Geometry>(polygon.RawGeoJson);
+
+        // Get the bounding box. 
         var boundingBox = new GeometryFactory().CreatePolygon([
             new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat), 
             new Coordinate(bounds.NorthEast.Lng, bounds.SouthWest.Lat), 
@@ -83,13 +98,11 @@ public static class GeoUtils
         // Try not to kill the user's browser.
         if (hexes.Count > HexLimit)
         {
-            throw new ArgumentException($"Polygon {polygon.Name} contains too many hexes" +
-                                        $" at resolution {resolution}!");
+            throw new ArgumentException($"Polygon {polygon.Name} contains too many hexes at resolution {resolution}!");
         }
 
         // Parse the result into a dictionary.
-        return hexes
-            .ToDictionary(x => x.ToString(), y => new GeoJsonWriter().Write(y.GetCellBoundary()));
+        return hexes.ToDictionary(x => x.ToString(), y => new GeoJsonWriter().Write(y.GetCellBoundary()));
     }
 
     /// <summary>
@@ -128,7 +141,7 @@ public static class GeoUtils
     /// <param name="collection">The collection to find hexes for.</param>
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
-    /// <param name="bounds">The viewport to get hexes within.</param>
+    /// <param name="boundingBox">The viewport to get hexes within.</param>
     private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes, Geometry boundingBox)
     {
         foreach (var geo in collection.Geometries)
