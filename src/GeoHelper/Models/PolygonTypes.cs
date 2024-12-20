@@ -3,5 +3,6 @@
 public enum PolygonTypes
 {
     Wkt,
-    GeoJson
+    GeoJson,
+    FromLeaflet
 }
