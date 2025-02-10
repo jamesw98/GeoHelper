@@ -153,7 +153,7 @@
             Type = PolygonTypes.FromLeaflet
         };
 
-        if (_polygons.Count == 1)
+        if (_polygons is [{ RawInput: null }] || _polygons[0].RawInput?.Trim() == string.Empty)
         {
             _polygons[0] = poly;
         }
