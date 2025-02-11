@@ -142,3 +142,8 @@ export function add_geojson(raw, name, hex) {
 export function remove_geo(name) {
     goesByName[name].remove()
 }
+export function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).catch((err) => {
+        alert(err.message);
+    });
+}
