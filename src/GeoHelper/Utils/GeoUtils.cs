@@ -105,6 +105,19 @@ public static class GeoUtils
         return hexes.ToDictionary(x => x.ToString(), y => new GeoJsonWriter().Write(y.GetCellBoundary()));
     }
 
+    public static string Convert(string input, bool stringify, bool isGeoJson)
+    {
+        // Convert from WKT to GeoJson.
+        if (!isGeoJson)
+        {
+            var geoJson = WktToGeoJsonString(input);
+            return stringify ? $"\"{geoJson.Replace("\"", "\\\"")}\"" : geoJson;
+        }
+        
+        // Convert from GeoJson to WKT
+        return new GeoJsonReader().Read<IFeature>(input).Geometry.AsText();
+    }
+
     /// <summary>
     /// Finds hexes for a single polygon.
     /// </summary>
@@ -161,8 +174,7 @@ public static class GeoUtils
     /// <exception cref="ArgumentException">If the WKT could not be parsed.</exception>
     private static string WktToGeoJsonString(string? wkt)
     {
-        var geo = new WKTReader().Read(wkt)
-                  ?? throw new ArgumentException("Could not parse WKT.");
+        var geo = new WKTReader().Read(wkt) ?? throw new ArgumentException("Could not parse WKT.");
         return new GeoJsonWriter().Write(geo);
     }
 }

@@ -61,6 +61,8 @@
                         <MudColorPicker @bind-Text="@polygon.HexColor" Label="Spectrum"
                                         ColorPickerView="ColorPickerView.Spectrum"/>
                         <div style="flex-grow: 0.05"/>
+                        <MudIconButton Icon="@Icons.Material.Outlined.ChangeCircle" OnClick="async () => { await OpenConvert(polygon.RawInput); }"/>
+                        <div style="flex-grow: 0.05"/>
                         <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" VerticalAlign="true" OverrideStyles="false">
                             <MudButton Variant="Variant.Outlined" class="ms-3 me-3"
                                        OnClick="@(async () => { await AddPolygon(polygon); })"
@@ -324,6 +326,22 @@
         };
         var options = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true };
         await DialogService.ShowAsync<FileImportDialog>("File Import", parameters, options);
+    }
+
+    private async Task OpenConvert(string? input)
+    {
+        if (input is null)
+        {
+            Snackbar.Add("Something has gone wrong!", Severity.Error);
+            return;
+        }
+
+        DialogParameters parameters = new()
+        {
+            { "Input", input }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium };
+        await DialogService.ShowAsync<ConversionDialog>("Convert", parameters, options);
     }
 
     /// <summary>
