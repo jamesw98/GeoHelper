@@ -1,0 +1,58 @@
+﻿@using GeoHelper.Utils
+@inject IJSRuntime JsRuntime
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="Input" Label="Input" ReadOnly="true" Variant="Variant.Text" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.ContentCopy" OnAdornmentClick="() => CopyText(Input)"/>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Convert" Color="Color.Success">Convert</MudButton>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+}
+
+@code {
+    
+    /// <summary>
+    /// The JS module to use.
+    /// </summary>
+    private IJSObjectReference? _module;
+    
+    [Parameter]
+    public required string Input { get; set; }
+
+    private bool IsGeojson => Input.Trim().StartsWith("{");
+
+    private bool _stringify = true;
+
+    private async Task Convert()
+    {
+        Input = GeoUtils.Convert(Input, _stringify, IsGeojson);
+    }
+    
+    public async Task CopyText(string text)
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("copyToClipboard", text);
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./leaflet.js");
+            StateHasChanged();  
+        }
+    }
+
+}
