@@ -36,9 +36,7 @@ export async function get_viewport() {
 const map = L.map('map').setView({ lon: -84.386330, lat: 33.753746  }, 5);
 var drawControl = new L.Control.Draw({
     draw: {
-        marker: false,
-        circle: false,
-        circlemarker: false
+        marker: false
     }
 });
 map.addControl(drawControl);
