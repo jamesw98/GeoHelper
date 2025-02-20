@@ -1,9 +1,9 @@
 {
   "mainAssemblyName": "GeoHelper",
   "resources": {
-    "hash": "sha256-0yZTps1ewN8s0mRn60+Wv6kQcfDfVEGIb0K/N4BKQtY=",
+    "hash": "sha256-mqeojyHMLesj+FOPG/3FkBqZXxS5yCYCY2wRQhAIyBQ=",
     "fingerprinting": {
-      "GeoHelper.vkpopp4euk.wasm": "GeoHelper.wasm",
+      "GeoHelper.7apfizygua.wasm": "GeoHelper.wasm",
       "Microsoft.AspNetCore.Components.Forms.aqnxj8lz9n.wasm": "Microsoft.AspNetCore.Components.Forms.wasm",
       "Microsoft.AspNetCore.Components.zx953gfoco.wasm": "Microsoft.AspNetCore.Components.wasm",
       "Microsoft.AspNetCore.Components.Web.pcv2uhdy2x.wasm": "Microsoft.AspNetCore.Components.Web.wasm",
@@ -95,7 +95,7 @@
       "System.Runtime.InteropServices.JavaScript.f4ln4hfftw.wasm": "sha256-r+LQmgoVdHgFKWJvUNAR7HQZAtSw+xvBIQ6siSPsBNM="
     },
     "assembly": {
-      "GeoHelper.vkpopp4euk.wasm": "sha256-fxTOW0Cc3mk2nHZxOP04vaTJd+Vx5sLp7lWkVlrmynQ=",
+      "GeoHelper.7apfizygua.wasm": "sha256-QfSI/grNOISMnW1VSchKQcATpSidayoZugLN75upWzY=",
       "Microsoft.AspNetCore.Components.Forms.aqnxj8lz9n.wasm": "sha256-nua3TnWYafbhUbvJCzUuKOMACGB4LpfpDkiVv8Xkudc=",
       "Microsoft.AspNetCore.Components.zx953gfoco.wasm": "sha256-l9TeQkUU/cJUlt4Kv9kyUy8g6pCzPe8fDWMGaEGe3d8=",
       "Microsoft.AspNetCore.Components.Web.pcv2uhdy2x.wasm": "sha256-x+K5FtgFogfo1mv4bOYY/YDGkhvINFHfYfqD9GoexNY=",
