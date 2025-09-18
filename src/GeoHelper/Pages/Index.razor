@@ -4,6 +4,7 @@
 @using Color = MudBlazor.Color
 @using Polygon = GeoHelper.Models.Polygon
 @using GeoHelper.Utils
+@using H3.Algorithms
 @inject HttpClient Http
 @implements IAsyncDisposable
 
@@ -31,6 +32,13 @@
                     Import Shapefile
                 </MudButton>
                 <MudSpacer/>
+                <MudSelect Label="Type" class="m-3" Variant="Variant.Outlined"
+                           T="VertexTestMode" @bind-Value="_testMode" >
+                    <MudSelectItem T="VertexTestMode" Value="VertexTestMode.Center"></MudSelectItem>
+                    <MudSelectItem T="VertexTestMode" Value="VertexTestMode.All"></MudSelectItem>
+                    <MudSelectItem T="VertexTestMode" Value="VertexTestMode.Any"></MudSelectItem>
+                </MudSelect>
+                <MudSpacer/>
                 <MudSwitch T="bool" Checked="_toggleHexes"
                            CheckedChanged="async () => { _toggleHexes = !_toggleHexes; HandleCheck(); }"
                            Label="H3 Hexes"
@@ -38,7 +46,7 @@
                 <MudSpacer/>
                 <MudSelect T="int" @bind-Value="@_hexResolution"
                            Label="Resolution" Variant="Variant.Outlined"
-                           AnchorOrigin="Origin.BottomCenter" Style="width: 50px">
+                           AnchorOrigin="Origin.BottomCenter" Style="width: 100px">
                     @for (var i = 1; i <= 10; i++)
                     {
                         <MudSelectItem T="int" Value="i"/>
@@ -90,6 +98,8 @@
 </MudContainer>
 
 @code {
+    private VertexTestMode _testMode = VertexTestMode.Center;
+    
     /// <summary>
     /// The action to change a nonstatic value from inside a static method.
     /// Is this a hack? I'm not sure, an example like this was in some msft docs.
@@ -210,7 +220,7 @@
                 var color = $"#{random.Next(0x1000000):X6}";
                 try
                 {
-                    var hexes = GeoUtils.GetH3HexesForPolygon(poly, _hexResolution, bounds);
+                    var hexes = GeoUtils.GetH3HexesForPolygon(poly, _hexResolution, bounds, _testMode);
                     foreach (var (id, hex) in hexes)
                     {
                         _hexIds.Add(id);

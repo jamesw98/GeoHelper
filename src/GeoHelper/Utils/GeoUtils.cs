@@ -67,13 +67,13 @@ public static class GeoUtils
     /// <exception cref="ArgumentException">
     /// If too many hexes were found to lie within the provided polygon or collection. See <see cref="HexLimit"/>.
     /// </exception>
-    public static Dictionary<string, string> GetH3HexesForPolygon(Polygon polygon, int resolution, LeafletViewport bounds)
+    public static Dictionary<string, string> GetH3HexesForPolygon(Polygon polygon, int resolution, LeafletViewport bounds, VertexTestMode testMode=VertexTestMode.Center)
     {
         // If the polygon is from leaflet, we need to try getting a feature, if not, just get a normal geometry.
         var geo = polygon.Type == PolygonTypes.FromLeaflet 
             ? Reader.Read<IFeature>(polygon.RawGeoJson).Geometry 
             : Reader.Read<Geometry>(polygon.RawGeoJson);
-
+        
         // Get the bounding box. 
         var boundingBox = new GeometryFactory().CreatePolygon([
             new Coordinate(bounds.SouthWest.Lng, bounds.SouthWest.Lat), 
@@ -88,10 +88,10 @@ public static class GeoUtils
         switch (geo)
         {
             case GeometryCollection collection:
-                HandleGeometryCollection(collection, resolution, hexes, boundingBox);
+                HandleGeometryCollection(collection, resolution, hexes, boundingBox, testMode);
                 break;
             default:
-                HandlePolygon(geo, resolution, hexes, boundingBox);
+                HandlePolygon(geo, resolution, hexes, boundingBox, testMode);
                 break;
         }
 
@@ -125,7 +125,7 @@ public static class GeoUtils
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
     /// <param name="boundingBox">The viewport to get hexes within.</param>
-    private static void HandlePolygon(Geometry polygon, int resolution, List<H3Index> hexes, Geometry boundingBox)
+    private static void HandlePolygon(Geometry polygon, int resolution, List<H3Index> hexes, Geometry boundingBox, VertexTestMode testMode)
     {
 
         var intersectPoly = boundingBox.Intersection(polygon);
@@ -137,13 +137,13 @@ public static class GeoUtils
                 {
                     throw new ArgumentException("Found null geometry when attempting to get hexes.");
                 }
-                hexes.AddRange(g.Fill(resolution));
+                hexes.AddRange(g.Fill(resolution, testMode));
             }
         }
         else
         {
             // Get just the hexes that are both within the bounding box and within the requested polygon.
-            hexes.AddRange(intersectPoly.Fill(resolution));
+            hexes.AddRange(intersectPoly.Fill(resolution, testMode));
         }
         
     }
@@ -155,13 +155,13 @@ public static class GeoUtils
     /// <param name="resolution">The H3 resolution to use.</param>
     /// <param name="hexes">Pass by reference. The output list.</param>
     /// <param name="boundingBox">The viewport to get hexes within.</param>
-    private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes, Geometry boundingBox)
+    private static void HandleGeometryCollection(GeometryCollection collection, int resolution, List<H3Index> hexes, Geometry boundingBox, VertexTestMode testMode)
     {
         foreach (var geo in collection.Geometries)
         {
             if (geo is not null)
             {
-                HandlePolygon(geo, resolution, hexes, boundingBox);
+                HandlePolygon(geo, resolution, hexes, boundingBox, testMode);
             }
         }
     }
