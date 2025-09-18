@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "GeoHelper",
   "resources": {
-    "hash": "sha256-QSSAd5YHCd8HCWjQCPzZiv/3jMwNdS9AxFCtf3DaaUA=",
+    "hash": "sha256-5lFbbJ8XZVfcbzruPWCmd/iJw62tcaEiuwhVeeZKH8Y=",
     "fingerprinting": {
       "Microsoft.AspNetCore.Components.zx953gfoco.wasm": "Microsoft.AspNetCore.Components.wasm",
       "Microsoft.AspNetCore.Components.Forms.aqnxj8lz9n.wasm": "Microsoft.AspNetCore.Components.Forms.wasm",
@@ -67,7 +67,7 @@
       "System.m0fu6d0eya.wasm": "System.wasm",
       "netstandard.6bc6n4id0b.wasm": "netstandard.wasm",
       "System.Private.CoreLib.lkwxcz22oo.wasm": "System.Private.CoreLib.wasm",
-      "GeoHelper.dsqiq0icdk.wasm": "GeoHelper.wasm",
+      "GeoHelper.9iyl9o46h0.wasm": "GeoHelper.wasm",
       "dotnet.js": "dotnet.js",
       "dotnet.native.9ih887ebfz.js": "dotnet.native.js",
       "dotnet.native.21mns4qp4i.wasm": "dotnet.native.wasm",
@@ -157,7 +157,7 @@
       "System.Xml.Linq.qsgzs1hc1j.wasm": "sha256-yo+J3RWIIHIiwAhqsR9JizNkH/+hd3auB44RBmvvLoI=",
       "System.m0fu6d0eya.wasm": "sha256-hkGLo/MuT/FJ0Xf4XUL0D2VA4dZV532GHNB1JicxLko=",
       "netstandard.6bc6n4id0b.wasm": "sha256-0upAOk/fo1BNQBmtd4jKk0LXdPVkIJKkGfgJzPNLnpQ=",
-      "GeoHelper.dsqiq0icdk.wasm": "sha256-4y0RLlXZtn3HETc9lr99ETHw8hoFQ9xKQOtxJ3nw5/Y="
+      "GeoHelper.9iyl9o46h0.wasm": "sha256-8WqYAuhn6fA7jys+o9Ya0RxHkVBrhnebudpBnnR4C+s="
     }
   },
   "cacheBootResources": true,
